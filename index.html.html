@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HyperK+ Urgences</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --red:#E63946; --red-dark:#C1121F; --red-light:#FF6B6B;
+  --navy:#0D1B2A; --navy-mid:#1B2A3B; --navy-light:#243447;
+  --teal:#00B4D8; --white:#F8FAFC; --gray:#94A3B8;
+  --green:#2EC4B6; --yellow:#FFB703;
+}
+body { background:#0a0f1a; display:flex; justify-content:center; align-items:center; min-height:100vh; font-family:'DM Sans',sans-serif; padding:20px; }
+
+.phone { width:375px; height:812px; background:var(--navy); border-radius:48px; border:3px solid #2a3a4a; box-shadow:0 40px 120px rgba(0,0,0,.8),0 0 0 1px #1a2a3a; overflow:hidden; position:relative; display:flex; flex-direction:column; }
+.notch { position:absolute; top:0; left:50%; transform:translateX(-50%); width:120px; height:30px; background:#0a0f1a; border-radius:0 0 20px 20px; z-index:10; }
+.status-bar { background:var(--navy); padding:14px 28px 8px; display:flex; justify-content:space-between; align-items:center; flex-shrink:0; }
+.status-time { font-size:15px; font-weight:600; color:var(--white); font-family:'DM Mono',monospace; }
+.status-icons { display:flex; gap:6px; }
+.status-icons span { font-size:12px; color:var(--white); }
+
+.screen { flex:1; overflow-y:auto; overflow-x:hidden; scrollbar-width:none; display:none; }
+.screen::-webkit-scrollbar { display:none; }
+.screen.active { display:block; }
+.fade-in { animation:fadeIn .3s ease; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+/* SPLASH */
+#splash { background:linear-gradient(160deg,#0d1b2a 0%,#1a0a12 60%,#0d1b2a 100%); display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%; gap:24px; cursor:pointer; }
+#splash.active { display:flex; }
+.app-logo { width:90px; height:90px; background:linear-gradient(135deg,var(--red),var(--red-dark)); border-radius:26px; display:flex; align-items:center; justify-content:center; font-size:40px; animation:pulse-logo 2s infinite; }
+@keyframes pulse-logo { 0%,100%{box-shadow:0 20px 60px rgba(230,57,70,.4)} 50%{box-shadow:0 20px 80px rgba(230,57,70,.7)} }
+.app-name { font-size:32px; font-weight:700; color:var(--white); letter-spacing:-1px; }
+.app-name span { color:var(--red-light); }
+.app-sub { font-size:14px; color:var(--gray); letter-spacing:2px; text-transform:uppercase; }
+.splash-btn { margin-top:40px; background:var(--red); color:white; border:none; padding:16px 48px; border-radius:50px; font-size:16px; font-weight:600; font-family:'DM Sans',sans-serif; cursor:pointer; box-shadow:0 8px 32px rgba(230,57,70,.4); transition:all .2s; }
+.splash-btn:hover { transform:scale(1.05); }
+
+/* HOME */
+#home { background:var(--navy); }
+.home-header { background:linear-gradient(135deg,var(--red-dark),var(--red)); padding:20px 24px 28px; position:relative; overflow:hidden; }
+.home-header::before { content:''; position:absolute; top:-30px; right:-30px; width:120px; height:120px; border-radius:50%; background:rgba(255,255,255,.08); }
+.home-header::after { content:''; position:absolute; bottom:-20px; right:40px; width:80px; height:80px; border-radius:50%; background:rgba(255,255,255,.06); }
+.header-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+.header-greeting { font-size:13px; color:rgba(255,255,255,.7); }
+.header-name { font-size:20px; font-weight:700; color:white; }
+.header-badge { background:rgba(255,255,255,.2); color:white; padding:6px 12px; border-radius:20px; font-size:12px; font-weight:600; }
+.alert-banner { background:rgba(0,0,0,.25); border-radius:14px; padding:12px 16px; display:flex; align-items:center; gap:12px; }
+.alert-dot { width:10px; height:10px; border-radius:50%; background:var(--yellow); animation:blink 1s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+.alert-text { font-size:13px; color:white; font-weight:500; }
+.section-title { font-size:13px; font-weight:600; color:var(--gray); text-transform:uppercase; letter-spacing:1.5px; padding:20px 24px 10px; }
+
+.quick-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; padding:0 20px; }
+.quick-card { background:var(--navy-mid); border-radius:16px; padding:14px 12px; cursor:pointer; transition:all .2s; border:1px solid rgba(255,255,255,.04); }
+.quick-card:hover { transform:translateY(-2px); background:var(--navy-light); }
+.quick-card.red { border-top:3px solid var(--red); }
+.quick-card.teal { border-top:3px solid var(--teal); }
+.quick-card.purple { border-top:3px solid #8B5CF6; }
+.quick-card.yellow { border-top:3px solid var(--yellow); }
+.quick-icon { font-size:22px; margin-bottom:8px; }
+.quick-label { font-size:12px; font-weight:600; color:var(--white); line-height:1.3; }
+.quick-sub { font-size:10px; color:var(--gray); margin-top:3px; }
+
+.kit-status { margin:0 20px; background:linear-gradient(135deg,var(--navy-mid),var(--navy-light)); border-radius:20px; padding:18px; border:1px solid rgba(0,180,216,.2); cursor:pointer; }
+.kit-status-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+.kit-status-title { font-size:15px; font-weight:700; color:var(--white); }
+.kit-badge-ok { background:rgba(46,196,182,.15); color:var(--green); padding:4px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+.kit-meds { display:flex; flex-direction:column; gap:8px; }
+.kit-med-row { display:flex; justify-content:space-between; align-items:center; }
+.kit-med-name { font-size:13px; color:var(--gray); }
+.kit-med-stock { font-size:13px; font-weight:600; }
+.stock-ok { color:var(--green); }
+.stock-low { color:var(--yellow); }
+.progress-bar { height:4px; background:rgba(255,255,255,.08); border-radius:2px; margin-top:4px; }
+.progress-fill { height:4px; border-radius:2px; }
+
+/* KIT */
+#kit { background:var(--navy); }
+.page-header { background:var(--navy-mid); padding:18px 20px; display:flex; align-items:center; gap:14px; border-bottom:1px solid rgba(255,255,255,.06); }
+.back-btn { width:36px; height:36px; background:rgba(255,255,255,.08); border-radius:12px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:16px; color:white; transition:all .2s; flex-shrink:0; }
+.back-btn:hover { background:rgba(255,255,255,.15); }
+.phase-block { margin:14px 18px; border-radius:16px; overflow:hidden; border:1px solid rgba(255,255,255,.06); }
+.phase-header { padding:12px 16px; display:flex; align-items:center; gap:12px; }
+.phase-1 .phase-header { background:rgba(230,57,70,.15); }
+.phase-2 .phase-header { background:rgba(0,180,216,.12); }
+.phase-3 .phase-header { background:rgba(46,196,182,.12); }
+.phase-num { width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:white; flex-shrink:0; }
+.phase-1 .phase-num { background:var(--red); }
+.phase-2 .phase-num { background:var(--teal); }
+.phase-3 .phase-num { background:var(--green); }
+.phase-title { font-size:13px; font-weight:700; color:var(--white); }
+.phase-sub { font-size:11px; color:var(--gray); margin-top:2px; }
+.phase-body { background:var(--navy-mid); }
+.med-item { display:flex; align-items:center; gap:12px; padding:13px 16px; border-bottom:1px solid rgba(255,255,255,.04); cursor:pointer; transition:background .2s; }
+.med-item:last-child { border-bottom:none; }
+.med-item:hover { background:rgba(255,255,255,.03); }
+.med-icon-wrap { width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+.bg-red{background:rgba(230,57,70,.15)} .bg-blue{background:rgba(0,180,216,.15)} .bg-green{background:rgba(46,196,182,.15)} .bg-yellow{background:rgba(255,183,3,.15)} .bg-purple{background:rgba(139,92,246,.15)} .bg-orange{background:rgba(251,146,60,.15)}
+.med-info { flex:1; }
+.med-name { font-size:13px; font-weight:600; color:var(--white); }
+.med-dose { font-size:11px; color:var(--teal); font-family:'DM Mono',monospace; margin-top:2px; }
+.med-timing { font-size:11px; color:var(--gray); margin-top:2px; }
+.med-arrow { color:var(--gray); font-size:14px; }
+
+/* MED DETAIL */
+#meddetail { background:var(--navy); }
+.med-big-icon { width:54px; height:54px; border-radius:18px; display:flex; align-items:center; justify-content:center; font-size:26px; background:rgba(230,57,70,.15); flex-shrink:0; }
+.med-detail-name { font-size:20px; font-weight:700; color:var(--white); }
+.med-detail-class { font-size:12px; color:var(--gray); margin-top:3px; }
+.info-card { margin:14px 18px; background:var(--navy-mid); border-radius:16px; overflow:hidden; border:1px solid rgba(255,255,255,.06); }
+.info-row { display:flex; justify-content:space-between; align-items:flex-start; padding:12px 16px; border-bottom:1px solid rgba(255,255,255,.05); gap:12px; }
+.info-row:last-child { border-bottom:none; }
+.info-label { font-size:12px; color:var(--gray); flex-shrink:0; width:100px; }
+.info-value { font-size:13px; color:var(--white); font-weight:500; text-align:right; font-family:'DM Mono',monospace; }
+.warning-box { margin:0 18px 14px; background:rgba(255,183,3,.1); border:1px solid rgba(255,183,3,.3); border-radius:14px; padding:12px 14px; display:flex; gap:10px; }
+.warning-text { font-size:12px; color:#FFD166; line-height:1.5; }
+.administer-btn { margin:0 18px 28px; background:linear-gradient(135deg,var(--red),var(--red-dark)); color:white; border:none; width:calc(100% - 36px); padding:15px; border-radius:14px; font-size:15px; font-weight:700; font-family:'DM Sans',sans-serif; cursor:pointer; box-shadow:0 8px 24px rgba(230,57,70,.35); }
+
+/* PROTOCOLE */
+#protocole { background:var(--navy); }
+.proto-header { background:linear-gradient(135deg,#0d2a1a,#1a3a2a); padding:18px 20px; display:flex; align-items:center; gap:14px; border-bottom:1px solid rgba(46,196,182,.15); }
+.step-block { margin:14px 18px; background:var(--navy-mid); border-radius:16px; overflow:hidden; border:1px solid rgba(255,255,255,.05); }
+.step-item { display:flex; gap:12px; padding:14px 16px; border-bottom:1px solid rgba(255,255,255,.04); }
+.step-item:last-child { border-bottom:none; }
+.step-circle { width:30px; height:30px; border-radius:50%; background:rgba(46,196,182,.15); border:2px solid var(--green); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:var(--green); flex-shrink:0; }
+.step-text { flex:1; }
+.step-action { font-size:13px; font-weight:600; color:var(--white); }
+.step-detail { font-size:11px; color:var(--gray); margin-top:3px; line-height:1.4; }
+.step-time { background:rgba(46,196,182,.1); color:var(--green); padding:3px 8px; border-radius:8px; font-size:11px; font-family:'DM Mono',monospace; align-self:flex-start; flex-shrink:0; }
+
+/* DEFINITION */
+#definition { background:var(--navy); }
+.def-header { background:linear-gradient(135deg,#0a0a2a,#1a0a3a); padding:18px 20px; display:flex; align-items:center; gap:14px; border-bottom:1px solid rgba(139,92,246,.2); }
+.def-card { margin:14px 18px; background:var(--navy-mid); border-radius:16px; overflow:hidden; border:1px solid rgba(255,255,255,.06); }
+.def-block { padding:16px; border-bottom:1px solid rgba(255,255,255,.05); }
+.def-block:last-child { border-bottom:none; }
+.def-block-title { font-size:11px; font-weight:700; color:var(--gray); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+.def-block-title span { font-size:14px; }
+.def-text { font-size:13px; color:#CBD5E1; line-height:1.7; }
+.def-text strong { color:var(--white); }
+.def-highlight { margin:14px 18px; background:rgba(230,57,70,.08); border:1px solid rgba(230,57,70,.25); border-radius:16px; padding:16px; }
+.def-highlight-title { font-size:13px; font-weight:700; color:var(--red-light); margin-bottom:10px; }
+.threshold-row { display:flex; align-items:center; gap:12px; padding:8px 0; border-bottom:1px solid rgba(255,255,255,.05); }
+.threshold-row:last-child { border-bottom:none; }
+.threshold-val { font-size:13px; font-weight:700; font-family:'DM Mono',monospace; min-width:90px; }
+.threshold-desc { font-size:12px; color:var(--gray); flex:1; }
+.threshold-badge { font-size:10px; font-weight:700; padding:3px 8px; border-radius:6px; white-space:nowrap; }
+.causes-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:14px 18px; }
+.cause-card { background:var(--navy-mid); border-radius:12px; padding:12px; border:1px solid rgba(255,255,255,.05); }
+.cause-icon { font-size:20px; margin-bottom:6px; }
+.cause-title { font-size:12px; font-weight:700; color:var(--white); margin-bottom:4px; }
+.cause-list { font-size:11px; color:var(--gray); line-height:1.6; }
+
+/* ECG */
+#ecg { background:var(--navy); }
+.ecg-page-header { background:linear-gradient(135deg,#0a1a0a,#0d2a1a); padding:18px 20px; display:flex; align-items:center; gap:14px; border-bottom:1px solid rgba(46,196,182,.2); }
+.k-selector { margin:14px 18px; background:var(--navy-mid); border-radius:16px; padding:16px; border:1px solid rgba(255,255,255,.06); }
+.k-selector-title { font-size:11px; color:var(--gray); font-weight:600; text-transform:uppercase; letter-spacing:1px; margin-bottom:12px; }
+.k-btns { display:flex; gap:7px; }
+.k-btn { flex:1; padding:9px 4px; border-radius:10px; border:2px solid rgba(255,255,255,.08); background:rgba(255,255,255,.03); color:var(--gray); font-size:11px; font-weight:700; font-family:'DM Mono',monospace; cursor:pointer; text-align:center; transition:all .2s; }
+.k-btn div { font-size:9px; font-family:'DM Sans',sans-serif; font-weight:400; margin-top:2px; opacity:.7; }
+.k-btn.sel-normal { border-color:var(--green); color:var(--green); background:rgba(46,196,182,.1); }
+.k-btn.sel-mild { border-color:var(--yellow); color:var(--yellow); background:rgba(255,183,3,.1); }
+.k-btn.sel-severe { border-color:#FF6B6B; color:#FF6B6B; background:rgba(255,107,107,.1); }
+.k-btn.sel-critical { border-color:var(--red); color:var(--red); background:rgba(230,57,70,.12); }
+.ecg-canvas-wrap { margin:0 18px; background:#020e02; border-radius:14px; border:1px solid rgba(46,196,182,.15); padding:8px; position:relative; overflow:hidden; }
+.ecg-grid { position:absolute; inset:0; background-image:linear-gradient(rgba(46,196,182,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(46,196,182,.07) 1px,transparent 1px); background-size:20px 20px; pointer-events:none; }
+.ecg-grid2 { position:absolute; inset:0; background-image:linear-gradient(rgba(46,196,182,.13) 1px,transparent 1px),linear-gradient(90deg,rgba(46,196,182,.13) 1px,transparent 1px); background-size:100px 80px; pointer-events:none; }
+#ecgCanvas { display:block; width:100%; position:relative; z-index:2; }
+.ecg-lbl { position:absolute; top:8px; left:12px; font-size:9px; color:rgba(46,196,182,.4); font-family:'DM Mono',monospace; z-index:3; }
+.ecg-lbl2 { position:absolute; top:8px; right:12px; font-size:9px; font-family:'DM Mono',monospace; z-index:3; transition:color .3s; }
+.ecg-status-row { margin:10px 18px 0; display:flex; gap:8px; }
+.rhythm-badge { flex:1; padding:10px 12px; border-radius:11px; font-size:12px; font-weight:700; text-align:center; transition:all .3s; }
+.hr-badge { padding:10px 14px; background:var(--navy-mid); border:1px solid rgba(255,255,255,.06); border-radius:11px; text-align:center; min-width:62px; }
+.hr-val { font-size:20px; font-weight:700; color:var(--white); font-family:'DM Mono',monospace; }
+.hr-unit { font-size:10px; color:var(--gray); }
+.signs-card { margin:10px 18px; background:var(--navy-mid); border-radius:16px; border:1px solid rgba(255,255,255,.05); overflow:hidden; }
+.signs-head { padding:10px 14px; font-size:11px; font-weight:700; color:var(--gray); text-transform:uppercase; letter-spacing:1px; border-bottom:1px solid rgba(255,255,255,.05); background:rgba(255,255,255,.02); }
+.sign-row { display:flex; align-items:center; gap:10px; padding:10px 14px; border-bottom:1px solid rgba(255,255,255,.04); transition:background .3s; }
+.sign-row:last-child { border-bottom:none; }
+.sign-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; transition:all .3s; }
+.sign-name { flex:1; font-size:12px; color:var(--gray); transition:color .3s; }
+.sign-name.active { color:var(--white); font-weight:600; }
+.sign-level { font-size:10px; padding:2px 8px; border-radius:6px; font-weight:600; transition:all .3s; white-space:nowrap; }
+.ecg-action { margin:0 18px 14px; border-radius:13px; padding:13px 14px; transition:all .3s; }
+.ecg-action-title { font-size:13px; font-weight:700; margin-bottom:4px; }
+.ecg-action-text { font-size:11px; color:#CBD5E1; line-height:1.5; }
+@keyframes pulse-red { 0%,100%{opacity:1} 50%{opacity:.5} }
+.pulse-anim { animation:pulse-red .9s infinite; }
+
+/* DISCLAIMER */
+.disc { margin:0 18px 20px; background:rgba(255,255,255,.03); border-radius:10px; padding:8px 12px; border:1px solid rgba(255,255,255,.05); }
+.disc p { font-size:10px; color:var(--gray); line-height:1.4; text-align:center; }
+
+/* BOTTOM NAV */
+.bottom-nav { background:var(--navy-mid); padding:10px 16px 26px; display:flex; justify-content:space-around; border-top:1px solid rgba(255,255,255,.07); flex-shrink:0; }
+.nav-item { display:flex; flex-direction:column; align-items:center; gap:3px; cursor:pointer; padding:4px 10px; border-radius:12px; transition:all .2s; }
+.nav-item.active { background:rgba(230,57,70,.12); }
+.nav-icon { font-size:19px; }
+.nav-label { font-size:10px; color:var(--gray); font-weight:500; }
+.nav-item.active .nav-label { color:var(--red-light); }
+
+.outer-label { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); color:rgba(255,255,255,.25); font-size:11px; font-family:'DM Mono',monospace; letter-spacing:1px; white-space:nowrap; }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="notch"></div>
+  <div class="status-bar">
+    <span class="status-time">09:41</span>
+    <div class="status-icons"><span>📶</span><span>🔋</span></div>
+  </div>
+
+  <!-- SPLASH -->
+  <div class="screen active" id="splash" onclick="goTo('home')">
+    <div class="app-logo">⚡</div>
+    <div style="text-align:center">
+      <div class="app-name">Hyper<span>K+</span></div>
+      <div class="app-sub">Kit Urgences</div>
+    </div>
+    <p style="color:var(--gray);font-size:13px;text-align:center;padding:0 40px;line-height:1.6">Application d'aide à la prise en charge de l'hyperkaliémie aux urgences</p>
+    <button class="splash-btn">Accéder au kit →</button>
+  </div>
+
+  <!-- HOME -->
+  <div class="screen" id="home">
+    <div class="home-header">
+      <div class="header-top">
+        <div><div class="header-greeting">Bienvenue,</div><div class="header-name">Infirmier(e) Urgences</div></div>
+        <div class="header-badge">Service Actif</div>
+      </div>
+      <div class="alert-banner">
+        <div class="alert-dot"></div>
+        <div class="alert-text">Protocole hyperkaliémie disponible</div>
+      </div>
+    </div>
+    <div class="section-title">Actions rapides</div>
+    <div class="quick-grid">
+      <div class="quick-card red" onclick="goTo('kit')">
+        <div class="quick-icon">💊</div>
+        <div class="quick-label">Kit médicamenteux</div>
+        <div class="quick-sub">6 médicaments</div>
+      </div>
+      <div class="quick-card teal" onclick="goTo('protocole')">
+        <div class="quick-icon">📋</div>
+        <div class="quick-label">Protocole urgence</div>
+        <div class="quick-sub">Étape par étape</div>
+      </div>
+      <div class="quick-card purple" onclick="goTo('definition')">
+        <div class="quick-icon">📖</div>
+        <div class="quick-label">Définition</div>
+        <div class="quick-sub">Hyperkaliémie</div>
+      </div>
+      <div class="quick-card yellow" onclick="goTo('ecg')">
+        <div class="quick-icon">🫀</div>
+        <div class="quick-label">Signes ECG</div>
+        <div class="quick-sub">Guide visuel</div>
+      </div>
+    </div>
+    <div class="section-title">État du kit d'urgence</div>
+    <div class="kit-status" onclick="goTo('kit')">
+      <div class="kit-status-top"><div class="kit-status-title">🧰 Kit HyperK+</div><div class="kit-badge-ok">✓ Complet</div></div>
+      <div class="kit-meds">
+        <div><div class="kit-med-row"><span class="kit-med-name">Gluconate Ca 10%</span><span class="kit-med-stock stock-ok">5 ampoules</span></div><div class="progress-bar"><div class="progress-fill" style="width:83%;background:var(--green)"></div></div></div>
+        <div><div class="kit-med-row"><span class="kit-med-name">Insuline rapide</span><span class="kit-med-stock stock-ok">10 UI dispo</span></div><div class="progress-bar"><div class="progress-fill" style="width:70%;background:var(--green)"></div></div></div>
+        <div><div class="kit-med-row"><span class="kit-med-name">Kayexalate</span><span class="kit-med-stock stock-low">Stock faible</span></div><div class="progress-bar"><div class="progress-fill" style="width:25%;background:var(--yellow)"></div></div></div>
+      </div>
+    </div>
+    <div class="disc" style="margin-top:18px"><p>⚠️ Maquette de démonstration — Recommandation PFE Sciences Infirmières 2026</p></div>
+  </div>
+
+  <!-- KIT -->
+  <div class="screen" id="kit">
+    <div class="page-header">
+      <div class="back-btn" onclick="goTo('home')">←</div>
+      <div><div style="font-size:17px;font-weight:700;color:var(--white)">Kit médicamenteux</div><div style="font-size:11px;color:var(--gray)">Hyperkaliémie — Urgences</div></div>
+    </div>
+    <div class="phase-block phase-1">
+      <div class="phase-header"><div class="phase-num">1</div><div><div class="phase-title">Stabilisation cardiaque</div><div class="phase-sub">Action immédiate — 0 à 5 min</div></div></div>
+      <div class="phase-body">
+        <div class="med-item" onclick="goTo('meddetail')"><div class="med-icon-wrap bg-red">💉</div><div class="med-info"><div class="med-name">Gluconate de Calcium 10%</div><div class="med-dose">10 ml IV en 10 min</div><div class="med-timing">Répéter si ECG anormal persist.</div></div><div class="med-arrow">›</div></div>
+      </div>
+    </div>
+    <div class="phase-block phase-2">
+      <div class="phase-header"><div class="phase-num">2</div><div><div class="phase-title">Transfert intracellulaire K⁺</div><div class="phase-sub">Réduction rapide — 15 à 60 min</div></div></div>
+      <div class="phase-body">
+        <div class="med-item"><div class="med-icon-wrap bg-blue">🩹</div><div class="med-info"><div class="med-name">Insuline Rapide + Glucose</div><div class="med-dose">10 UI + 25g G30% IV</div><div class="med-timing">↓ 0,6–1 mmol/L en 15 min</div></div><div class="med-arrow">›</div></div>
+        <div class="med-item"><div class="med-icon-wrap bg-purple">💧</div><div class="med-info"><div class="med-name">Bicarbonate de Sodium</div><div class="med-dose">50–100 mmol IV lent</div><div class="med-timing">Si acidose métabolique associée</div></div><div class="med-arrow">›</div></div>
+        <div class="med-item"><div class="med-icon-wrap bg-yellow">💨</div><div class="med-info"><div class="med-name">Salbutamol</div><div class="med-dose">10–20 mg nébulisation</div><div class="med-timing">Effet en 30 min, durée 2h</div></div><div class="med-arrow">›</div></div>
+      </div>
+    </div>
+    <div class="phase-block phase-3">
+      <div class="phase-header"><div class="phase-num">3</div><div><div class="phase-title">Élimination du potassium</div><div class="phase-sub">Bilan négatif — heures suivantes</div></div></div>
+      <div class="phase-body">
+        <div class="med-item"><div class="med-icon-wrap bg-orange">💊</div><div class="med-info"><div class="med-name">Kayexalate (Résine)</div><div class="med-dose">15–30 g per os ou rectal</div><div class="med-timing">Effet retardé 2–4h</div></div><div class="med-arrow">›</div></div>
+        <div class="med-item"><div class="med-icon-wrap bg-blue">💊</div><div class="med-info"><div class="med-name">Furosémide (Diurétique)</div><div class="med-dose">40–80 mg IV</div><div class="med-timing">Si diurèse conservée</div></div><div class="med-arrow">›</div></div>
+        <div class="med-item"><div class="med-icon-wrap bg-green">🔄</div><div class="med-info"><div class="med-name">Dialyse en urgence</div><div class="med-dose">Hémodialyse</div><div class="med-timing">IRC sévère / hyperkaliémie réfractaire</div></div><div class="med-arrow">›</div></div>
+      </div>
+    </div>
+    <div class="disc"><p>⚠️ Maquette PFE — Toujours vérifier avec le médecin responsable</p></div>
+  </div>
+
+  <!-- MED DETAIL -->
+  <div class="screen" id="meddetail">
+    <div class="page-header">
+      <div class="back-btn" onclick="goTo('kit')">←</div>
+      <div class="med-big-icon">💉</div>
+      <div><div class="med-detail-name">Gluconate Ca 10%</div><div class="med-detail-class">Stabilisateur membranaire</div></div>
+    </div>
+    <div class="info-card">
+      <div class="info-row"><span class="info-label">Dosage</span><span class="info-value">10 ml (1 ampoule)</span></div>
+      <div class="info-row"><span class="info-label">Voie</span><span class="info-value">IV lente</span></div>
+      <div class="info-row"><span class="info-label">Durée admin.</span><span class="info-value">10 minutes</span></div>
+      <div class="info-row"><span class="info-label">Début action</span><span class="info-value">1–3 min</span></div>
+      <div class="info-row"><span class="info-label">Durée effet</span><span class="info-value">30–60 min</span></div>
+      <div class="info-row"><span class="info-label">Indication</span><span class="info-value">Ondes T pointues ECG</span></div>
+      <div class="info-row"><span class="info-label">Répétition</span><span class="info-value">Si ECG anormal persist.</span></div>
+    </div>
+    <div class="warning-box"><span style="font-size:18px;flex-shrink:0">⚠️</span><div class="warning-text"><strong>Surveillance infirmière :</strong> ECG continu pendant l'administration. Ne réduit pas la kaliémie. Éviter si patient sous digoxine.</div></div>
+    <div class="info-card">
+      <div class="info-row"><span class="info-label">Mécanisme</span><span class="info-value" style="font-family:'DM Sans';font-size:12px">Stabilise membrane myocardique sans modifier kaliémie</span></div>
+      <div class="info-row"><span class="info-label">Stock kit</span><span class="info-value" style="color:var(--green)">✓ 5 ampoules</span></div>
+    </div>
+    <button class="administer-btn">Confirmer l'administration</button>
+  </div>
+
+  <!-- PROTOCOLE -->
+  <div class="screen" id="protocole">
+    <div class="proto-header">
+      <div class="back-btn" onclick="goTo('home')">←</div>
+      <div><div style="font-size:17px;font-weight:700;color:var(--white)">Protocole urgence</div><div style="font-size:11px;color:var(--gray)">Prise en charge hyperkaliémie</div></div>
+    </div>
+    <div style="padding:14px 18px 6px"><div style="background:rgba(230,57,70,.1);border:1px solid rgba(230,57,70,.3);border-radius:12px;padding:11px 14px;display:flex;gap:10px;align-items:center"><span style="font-size:18px">🚨</span><span style="font-size:12px;color:#FF9AA2;font-weight:500">K⁺ &gt; 6 mmol/L = Urgence vitale<br><span style="color:var(--gray);font-weight:400">Risque de mort par arythmie fatale</span></span></div></div>
+    <div class="step-block">
+      <div class="step-item"><div class="step-circle">1</div><div class="step-text"><div class="step-action">Installer sous ECG continu</div><div class="step-detail">Monitorage cardiaque immédiat. Rechercher ondes T pointues.</div></div><div class="step-time">0 min</div></div>
+      <div class="step-item"><div class="step-circle">2</div><div class="step-text"><div class="step-action">Voie veineuse périphérique</div><div class="step-detail">Prélèvement : ionogramme, créatinine, glycémie.</div></div><div class="step-time">2 min</div></div>
+      <div class="step-item"><div class="step-circle">3</div><div class="step-text"><div class="step-action">Gluconate de Calcium IV</div><div class="step-detail">10 ml en 10 min si anomalies ECG. Protège le myocarde.</div></div><div class="step-time">5 min</div></div>
+      <div class="step-item"><div class="step-circle">4</div><div class="step-text"><div class="step-action">Insuline + Glucose IV</div><div class="step-detail">10 UI insuline rapide + 25g G30%. Transfert K⁺ intracellulaire.</div></div><div class="step-time">10 min</div></div>
+      <div class="step-item"><div class="step-circle">5</div><div class="step-text"><div class="step-action">Surveillance glycémie</div><div class="step-detail">Glycémie capillaire toutes les 30 min. Risque hypoglycémie.</div></div><div class="step-time">15 min</div></div>
+      <div class="step-item"><div class="step-circle">6</div><div class="step-text"><div class="step-action">Élimination K⁺ — Kayexalate</div><div class="step-detail">Résine per os ou rectale. Furosémide si diurèse conservée.</div></div><div class="step-time">30 min</div></div>
+      <div class="step-item"><div class="step-circle">7</div><div class="step-text"><div class="step-action">Dialyse si réfractaire</div><div class="step-detail">Hémodialyse urgence si IRC sévère ou K⁺ > 6,5 mmol/L persistant.</div></div><div class="step-time">Si besoin</div></div>
+    </div>
+    <div class="disc"><p>⚠️ Maquette de recommandation — PFE Sciences Infirmières 2026</p></div>
+  </div>
+
+  <!-- DEFINITION -->
+  <div class="screen" id="definition">
+    <div class="def-header">
+      <div class="back-btn" onclick="goTo('home')">←</div>
+      <div style="font-size:28px">📖</div>
+      <div><div style="font-size:17px;font-weight:700;color:var(--white)">Définition</div><div style="font-size:11px;color:#A78BFA">Hyperkaliémie</div></div>
+    </div>
+
+    <!-- Définition principale -->
+    <div class="def-card">
+      <div class="def-block">
+        <div class="def-block-title"><span>⚗️</span> Définition</div>
+        <div class="def-text">L'<strong>hyperkaliémie</strong> est définie comme une concentration plasmatique en potassium (K⁺) <strong>supérieure à 5,0 mmol/L</strong>. Elle constitue l'un des troubles hydroélectrolytiques les plus <strong>potentiellement mortels</strong>, en raison de son impact direct sur la conduction cardiaque.</div>
+      </div>
+      <div class="def-block">
+        <div class="def-block-title"><span>⚡</span> Physiopathologie</div>
+        <div class="def-text">Le potassium est le principal cation intracellulaire. Son excès plasmatique modifie le <strong>potentiel de membrane</strong> des cellules myocardiques, entraînant une <strong>instabilité électrique</strong> pouvant conduire à la fibrillation ventriculaire et à l'arrêt cardiaque.</div>
+      </div>
+      <div class="def-block">
+        <div class="def-block-title"><span>🔬</span> Valeur normale</div>
+        <div class="def-text">Kaliémie normale : <strong style="color:var(--green);font-family:'DM Mono',monospace">3,5 – 5,0 mmol/L</strong><br>Au-delà de cette valeur, une prise en charge est nécessaire selon le niveau de gravité.</div>
+      </div>
+    </div>
+
+    <!-- Seuils de gravité -->
+    <div class="def-highlight">
+      <div class="def-highlight-title">🚨 Seuils de gravité</div>
+      <div class="threshold-row">
+        <span class="threshold-val" style="color:var(--green)">5.0–5.5</span>
+        <span class="threshold-desc">Légère — Surveillance</span>
+        <span class="threshold-badge" style="background:rgba(46,196,182,.15);color:var(--green)">Légère</span>
+      </div>
+      <div class="threshold-row">
+        <span class="threshold-val" style="color:var(--yellow)">5.5–6.0</span>
+        <span class="threshold-desc">Modérée — Traitement</span>
+        <span class="threshold-badge" style="background:rgba(255,183,3,.15);color:var(--yellow)">Modérée</span>
+      </div>
+      <div class="threshold-row">
+        <span class="threshold-val" style="color:#FF6B6B">6.0–6.5</span>
+        <span class="threshold-desc">Sévère — Urgence</span>
+        <span class="threshold-badge" style="background:rgba(255,107,107,.15);color:#FF6B6B">Sévère</span>
+      </div>
+      <div class="threshold-row">
+        <span class="threshold-val" style="color:var(--red)">&gt; 6.5</span>
+        <span class="threshold-desc">Critique — Réanimation</span>
+        <span class="threshold-badge" style="background:rgba(230,57,70,.15);color:var(--red)">Critique</span>
+      </div>
+    </div>
+
+    <!-- Causes -->
+    <div style="padding:4px 18px 8px;font-size:11px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:1px;">Principales causes</div>
+    <div class="causes-grid">
+      <div class="cause-card">
+        <div class="cause-icon">🫘</div>
+        <div class="cause-title">Insuffisance rénale</div>
+        <div class="cause-list">IRC / IRA<br>Oligurie<br>Anurie</div>
+      </div>
+      <div class="cause-card">
+        <div class="cause-icon">💊</div>
+        <div class="cause-title">Médicaments</div>
+        <div class="cause-list">IEC / ARA II<br>Spironolactone<br>AINS</div>
+      </div>
+      <div class="cause-card">
+        <div class="cause-icon">🧪</div>
+        <div class="cause-title">Causes métaboliques</div>
+        <div class="cause-list">Acidose<br>Diabète<br>Rhabdomyolyse</div>
+      </div>
+      <div class="cause-card">
+        <div class="cause-icon">🩸</div>
+        <div class="cause-title">Autres causes</div>
+        <div class="cause-list">Hémolyse<br>Brûlures<br>Transfusions</div>
+      </div>
+    </div>
+
+    <!-- Signes cliniques -->
+    <div class="def-card" style="margin-bottom:0">
+      <div class="def-block">
+        <div class="def-block-title"><span>🩺</span> Signes cliniques</div>
+        <div class="def-text">
+          <strong>Neuromusculaires :</strong> faiblesse musculaire, paresthésies, paralysie flasque ascendante.<br><br>
+          <strong>Cardiaques :</strong> palpitations, bradycardie, anomalies ECG (ondes T pointues, QRS élargi), risque d'arrêt cardiaque.<br><br>
+          <strong>Digestifs :</strong> nausées, vomissements, douleurs abdominales.
+        </div>
+      </div>
+    </div>
+    <div class="disc"><p>⚠️ Outil pédagogique — Maquette PFE Sciences Infirmières 2026</p></div>
+  </div>
+
+  <!-- ECG -->
+  <div class="screen" id="ecg">
+    <div class="ecg-page-header">
+      <div class="back-btn" onclick="goTo('home')">←</div>
+      <div><div style="font-size:17px;font-weight:700;color:var(--white)">Signes ECG</div><div style="font-size:11px;color:var(--gray)">Hyperkaliémie — Guide visuel interactif</div></div>
+    </div>
+    <div class="k-selector">
+      <div class="k-selector-title">Niveau de kaliémie (K⁺ mmol/L)</div>
+      <div class="k-btns">
+        <button class="k-btn sel-normal" id="btn-normal" onclick="selectK('normal',this)">&lt;5.5<div>Normal</div></button>
+        <button class="k-btn" id="btn-mild" onclick="selectK('mild',this)">5.5–6<div>Légère</div></button>
+        <button class="k-btn" id="btn-severe" onclick="selectK('severe',this)">6–6.5<div>Sévère</div></button>
+        <button class="k-btn" id="btn-critical" onclick="selectK('critical',this)">&gt;6.5<div>Critique</div></button>
+      </div>
+    </div>
+    <div class="ecg-canvas-wrap" id="ecgWrap">
+      <div class="ecg-grid"></div><div class="ecg-grid2"></div>
+      <span class="ecg-lbl">DII — 25mm/s</span>
+      <span class="ecg-lbl2" id="ecgLbl2" style="color:rgba(46,196,182,.5)">Rythme sinusal</span>
+      <canvas id="ecgCanvas" height="130"></canvas>
+    </div>
+    <div class="ecg-status-row">
+      <div class="rhythm-badge" id="rhythmBadge" style="background:rgba(46,196,182,.1);color:var(--green);border:1px solid rgba(46,196,182,.3)">✓ Rythme sinusal normal</div>
+      <div class="hr-badge"><div class="hr-val" id="hrVal">72</div><div class="hr-unit">bpm</div></div>
+    </div>
+    <div class="signs-card">
+      <div class="signs-head">Signes électrocardiographiques</div>
+      <div class="sign-row"><div class="sign-dot" id="dot-t" style="background:var(--green)"></div><span class="sign-name active" id="txt-t">Ondes T — Amplitude normale</span><span class="sign-level" id="lv-t" style="background:rgba(46,196,182,.1);color:var(--green)">Normal</span></div>
+      <div class="sign-row"><div class="sign-dot" id="dot-pr" style="background:var(--gray)"></div><span class="sign-name" id="txt-pr">Espace PR — Normal (120–200 ms)</span><span class="sign-level" id="lv-pr" style="background:rgba(148,163,184,.1);color:var(--gray)">Normal</span></div>
+      <div class="sign-row"><div class="sign-dot" id="dot-qrs" style="background:var(--gray)"></div><span class="sign-name" id="txt-qrs">Complexe QRS — Fin et normal</span><span class="sign-level" id="lv-qrs" style="background:rgba(148,163,184,.1);color:var(--gray)">Normal</span></div>
+      <div class="sign-row"><div class="sign-dot" id="dot-p" style="background:var(--gray)"></div><span class="sign-name" id="txt-p">Onde P — Présente et normale</span><span class="sign-level" id="lv-p" style="background:rgba(148,163,184,.1);color:var(--gray)">Normal</span></div>
+    </div>
+    <div class="ecg-action" id="ecgAction" style="background:rgba(46,196,182,.07);border:1px solid rgba(46,196,182,.2)">
+      <div class="ecg-action-title" id="ecgActionTitle" style="color:var(--green)">✓ Surveillance standard</div>
+      <div class="ecg-action-text" id="ecgActionText">ECG de contrôle toutes les 4h. Surveillance clinique habituelle.</div>
+    </div>
+    <div class="disc"><p>⚠️ Outil pédagogique — Ne remplace pas l'interprétation médicale</p></div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav" id="bottomNav" style="display:none">
+    <div class="nav-item active" id="nav-home" onclick="goTo('home')"><div class="nav-icon">🏠</div><div class="nav-label">Accueil</div></div>
+    <div class="nav-item" id="nav-kit" onclick="goTo('kit')"><div class="nav-icon">💊</div><div class="nav-label">Kit</div></div>
+    <div class="nav-item" id="nav-protocole" onclick="goTo('protocole')"><div class="nav-icon">📋</div><div class="nav-label">Protocole</div></div>
+    <div class="nav-item" id="nav-definition" onclick="goTo('definition')"><div class="nav-icon">📖</div><div class="nav-label">Définition</div></div>
+    <div class="nav-item" id="nav-ecg" onclick="goTo('ecg')"><div class="nav-icon">🫀</div><div class="nav-label">ECG</div></div>
+  </div>
+</div>
+
+<div class="outer-label">MAQUETTE PFE — NON CLINIQUE</div>
+
+<script>
+// NAVIGATION
+function goTo(screen) {
+  document.querySelectorAll('.screen').forEach(s => { s.classList.remove('active'); s.style.display='none'; });
+  const t = document.getElementById(screen);
+  t.style.display = (screen==='splash') ? 'flex' : 'block';
+  t.classList.add('active');
+  t.classList.remove('fade-in'); void t.offsetWidth; t.classList.add('fade-in');
+  const nav = document.getElementById('bottomNav');
+  if (screen==='splash') { nav.style.display='none'; return; }
+  nav.style.display='flex';
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const ni = document.getElementById('nav-'+screen);
+  if (ni) ni.classList.add('active');
+  if (screen==='ecg') { setTimeout(() => { ecgPhase=0; startECG(); }, 80); }
+  else stopECG();
+}
+
+// ECG DATA
+const ECG_DATA = {
+  normal: {
+    tag:'Rythme sinusal', tagC:'rgba(46,196,182,.5)',
+    rhythm:'✓ Rythme sinusal normal', rBg:'rgba(46,196,182,.1)', rC:'#2EC4B6', rBorder:'rgba(46,196,182,.3)', hr:72, lineC:'#2EC4B6',
+    signs:{
+      t:{txt:'Ondes T — Amplitude normale',lv:'Normal',c:'#2EC4B6',bg:'rgba(46,196,182,.1)',bold:false},
+      pr:{txt:'Espace PR — Normal (120–200 ms)',lv:'Normal',c:'#94A3B8',bg:'rgba(148,163,184,.1)',bold:false},
+      qrs:{txt:'Complexe QRS — Fin et normal',lv:'Normal',c:'#94A3B8',bg:'rgba(148,163,184,.1)',bold:false},
+      p:{txt:'Onde P — Présente et normale',lv:'Normal',c:'#94A3B8',bg:'rgba(148,163,184,.1)',bold:false}
+    },
+    action:{title:'✓ Surveillance standard',tC:'#2EC4B6',bg:'rgba(46,196,182,.07)',border:'rgba(46,196,182,.2)',desc:'ECG de contrôle toutes les 4h. Surveillance clinique habituelle.'},
+    cfg:{tH:15,prW:1,qrsW:1,pAmp:1,stS:0,sine:false,spd:1.8}
+  },
+  mild: {
+    tag:'Ondes T pointues ⚠', tagC:'#FFB703',
+    rhythm:'⚠ Ondes T pointues — Surveiller', rBg:'rgba(255,183,3,.1)', rC:'#FFB703', rBorder:'rgba(255,183,3,.3)', hr:76, lineC:'#FFB703',
+    signs:{
+      t:{txt:'Ondes T — Pointues et symétriques ⚠',lv:'Anormal',c:'#FFB703',bg:'rgba(255,183,3,.12)',bold:true},
+      pr:{txt:'Espace PR — Normal',lv:'Normal',c:'#94A3B8',bg:'rgba(148,163,184,.1)',bold:false},
+      qrs:{txt:'Complexe QRS — Normal',lv:'Normal',c:'#94A3B8',bg:'rgba(148,163,184,.1)',bold:false},
+      p:{txt:'Onde P — Présente',lv:'Normal',c:'#94A3B8',bg:'rgba(148,163,184,.1)',bold:false}
+    },
+    action:{title:'⚠ Gluconate de Calcium IV maintenant',tC:'#FFB703',bg:'rgba(255,183,3,.07)',border:'rgba(255,183,3,.3)',desc:'10 ml Gluconate Ca 10% IV en 10 min. Monitorage ECG continu. Alerter le médecin.'},
+    cfg:{tH:36,prW:1,qrsW:1,pAmp:1,stS:0,sine:false,spd:2}
+  },
+  severe: {
+    tag:'PR allongé — QRS élargi ⚠', tagC:'#FF6B6B',
+    rhythm:'🔴 Trouble de conduction — Urgent', rBg:'rgba(255,107,107,.1)', rC:'#FF6B6B', rBorder:'rgba(255,107,107,.35)', hr:55, lineC:'#FF6B6B',
+    signs:{
+      t:{txt:'Ondes T — Très pointues ⚠',lv:'Critique',c:'#FF6B6B',bg:'rgba(255,107,107,.12)',bold:true},
+      pr:{txt:'Espace PR — Allongé > 200 ms ⚠',lv:'Anormal',c:'#FF6B6B',bg:'rgba(255,107,107,.12)',bold:true},
+      qrs:{txt:'Complexe QRS — Élargi > 120 ms ⚠',lv:'Anormal',c:'#FF6B6B',bg:'rgba(255,107,107,.12)',bold:true},
+      p:{txt:'Onde P — Aplatie / diminuée',lv:'Anormal',c:'#FFB703',bg:'rgba(255,183,3,.1)',bold:true}
+    },
+    action:{title:'🚨 Urgence — Traitement immédiat',tC:'#FF6B6B',bg:'rgba(255,107,107,.08)',border:'rgba(255,107,107,.4)',desc:'Gluconate Ca IV + Insuline/Glucose IV. ECG continu. Médecin en urgence. Préparer dialyse.'},
+    cfg:{tH:44,prW:1.7,qrsW:1.8,pAmp:0.4,stS:4,sine:false,spd:2.5}
+  },
+  critical: {
+    tag:'⚡ Risque arrêt cardiaque', tagC:'#E63946',
+    rhythm:'💀 Onde sinusoïdale — CRITIQUE', rBg:'rgba(230,57,70,.12)', rC:'#E63946', rBorder:'rgba(230,57,70,.5)', hr:35, lineC:'#E63946',
+    signs:{
+      t:{txt:'QRS + T fusionnés — Onde sinusoïdale',lv:'Critique',c:'#E63946',bg:'rgba(230,57,70,.15)',bold:true},
+      pr:{txt:'Espace PR — Indéfini',lv:'Critique',c:'#E63946',bg:'rgba(230,57,70,.15)',bold:true},
+      qrs:{txt:'QRS très élargi — Aspect sinusoïdal',lv:'Critique',c:'#E63946',bg:'rgba(230,57,70,.15)',bold:true},
+      p:{txt:'Onde P — Absente',lv:'Critique',c:'#E63946',bg:'rgba(230,57,70,.15)',bold:true}
+    },
+    action:{title:'💀 CODE ROUGE — Réanimation',tC:'#E63946',bg:'rgba(230,57,70,.1)',border:'rgba(230,57,70,.5)',desc:'APPEL RÉANIMATION IMMÉDIAT. Gluconate Ca IV. Dialyse urgence. Défibrillateur à portée.'},
+    cfg:{sine:true,spd:3}
+  }
+};
+
+let currentK='normal', ecgRaf=null, ecgPhase=0;
+
+function selectK(lvl, btn) {
+  currentK = lvl;
+  ['normal','mild','severe','critical'].forEach(k => document.getElementById('btn-'+k).className='k-btn');
+  btn.className = 'k-btn sel-'+lvl;
+  const d = ECG_DATA[lvl];
+  const lbl2 = document.getElementById('ecgLbl2');
+  lbl2.textContent=d.tag; lbl2.style.color=d.tagC;
+  const rb = document.getElementById('rhythmBadge');
+  rb.textContent=d.rhythm; rb.style.background=d.rBg; rb.style.color=d.rC; rb.style.border='1px solid '+d.rBorder;
+  rb.className='rhythm-badge'+(lvl==='critical'?' pulse-anim':'');
+  document.getElementById('hrVal').textContent=d.hr;
+  ['t','pr','qrs','p'].forEach(k => {
+    const s=d.signs[k];
+    document.getElementById('dot-'+k).style.background=s.c;
+    const tn=document.getElementById('txt-'+k);
+    tn.textContent=s.txt; tn.style.color=s.bold?'#F1F5F9':'#94A3B8'; tn.style.fontWeight=s.bold?'600':'400';
+    tn.className='sign-name'+(s.bold?' active':'');
+    const lv=document.getElementById('lv-'+k);
+    lv.textContent=s.lv; lv.style.background=s.bg; lv.style.color=s.c;
+  });
+  document.getElementById('ecgActionTitle').textContent=d.action.title;
+  document.getElementById('ecgActionTitle').style.color=d.action.tC;
+  document.getElementById('ecgActionText').textContent=d.action.desc;
+  const ab=document.getElementById('ecgAction');
+  ab.style.background=d.action.bg; ab.style.border='1px solid '+d.action.border;
+  ecgPhase=0; stopECG(); startECG();
+}
+
+function stopECG() { if(ecgRaf){cancelAnimationFrame(ecgRaf);ecgRaf=null;} }
+
+function startECG() {
+  const canvas=document.getElementById('ecgCanvas');
+  const wrap=document.getElementById('ecgWrap');
+  if(!canvas||!wrap) return;
+  canvas.width=wrap.clientWidth-16;
+  const W=canvas.width, H=canvas.height;
+  const ctx=canvas.getContext('2d');
+  const d=ECG_DATA[currentK];
+  const cfg=d.cfg;
+  function draw() {
+    ctx.clearRect(0,0,W,H);
+    ctx.strokeStyle=d.lineC; ctx.lineWidth=currentK==='critical'?2.8:2;
+    ctx.lineJoin='round'; ctx.lineCap='round';
+    ctx.shadowColor=d.lineC; ctx.shadowBlur=currentK==='critical'?12:5;
+    ctx.beginPath();
+    if(cfg.sine) {
+      const A=42,freq=2.5;
+      for(let x=0;x<=W;x++){
+        const y=H*0.55-Math.sin(((x/W)*freq*Math.PI*2)-ecgPhase)*A;
+        x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+      }
+    } else {
+      const base=H*0.63, beatW=W/2.4;
+      for(let b=-1;b<=3;b++){
+        const bx=b*beatW-(ecgPhase%beatW);
+        const x0=bx, x1=x0+12*cfg.prW;
+        const px0=x1,px1=x0+10*cfg.prW+8,px2=x0+10*cfg.prW+16;
+        const prEnd=px2+10*cfg.prW, qx=prEnd, qrsEnd=qx+12*cfg.qrsW;
+        const stEnd=qrsEnd+8, tS=stEnd, tM=tS+18, tE=tS+34;
+        ctx.moveTo(x0,base); ctx.lineTo(x1,base);
+        if(cfg.pAmp>0){ctx.quadraticCurveTo(px1-4,base-10*cfg.pAmp,px1,base-10*cfg.pAmp);ctx.quadraticCurveTo(px1+4,base-10*cfg.pAmp,px2,base);}
+        else ctx.lineTo(px2,base);
+        ctx.lineTo(prEnd,base);
+        ctx.lineTo(qx+2,base+6);
+        ctx.lineTo(qx+5,base-48*(cfg.qrsW>1.5?1.25:1));
+        ctx.lineTo(qx+9*cfg.qrsW,base+12);
+        ctx.lineTo(qrsEnd,base);
+        ctx.lineTo(stEnd,base-cfg.stS*0.25);
+        ctx.bezierCurveTo(tS+6,base-cfg.stS*.1,tM-3,base-cfg.tH,tM,base-cfg.tH);
+        ctx.bezierCurveTo(tM+3,base-cfg.tH,tE-6,base,tE,base);
+        ctx.lineTo(tE+12,base);
+      }
+    }
+    ctx.stroke(); ctx.shadowBlur=0;
+    ecgPhase+=cfg.spd;
+    ecgRaf=requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+window.addEventListener('load',()=>{ selectK('normal',document.getElementById('btn-normal')); });
+</script>
+</body>
+</html>
